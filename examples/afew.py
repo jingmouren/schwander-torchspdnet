@@ -12,8 +12,44 @@ from torch.utils import data
 import torchspdnet.nn as spdnet
 from torchspdnet.optimizers import MixOptimizer
 
-def afew(data_loader):
+# Definition of the SPDNet
+class AfewNet(nn.Module):
+    def __init__(self, bn=False):
+        super(__class__,self).__init__()
+        self._bn = bn
+        dim=400
+        dim1=200; dim2=100; dim3=50
+        classes=7
+        self.re=spdnet.ReEig()
+        self.bimap1=spdnet.BiMap(1,1,dim,dim1)
+        if bn:
+            self.batchnorm1=spdnet.BatchNormSPD(dim1)
+        self.bimap2=spdnet.BiMap(1,1,dim1,dim2)
+        if bn:
+            self.batchnorm2=spdnet.BatchNormSPD(dim2)
+        self.bimap3=spdnet.BiMap(1,1,dim2,dim3)
+        if bn:
+            self.batchnorm3=spdnet.BatchNormSPD(dim3)
+        self.logeig=spdnet.LogEig()
+        self.linear=nn.Linear(dim3**2,classes).double()
+    def forward(self,x):
+        x=self.bimap1(x)
+        if self._bn:
+            x=self.batchnorm1(x)
+        x=self.re(x)
+        x=self.bimap2(x)
+        if self._bn:
+            x=self.batchnorm2(x)
+        x=self.re(x)
+        x=self.bimap3(x)
+        if self._bn:
+            x=self.batchnorm1(x)
+        x=self.logeig(x)
+        x_vec=.view(x.shape[0],-1)
+        y=self.linear(x_vec)
+        return y
 
+def afew(data_loader):
     #main parameters
     lr=1e-2
     data_path='data/afew/'
@@ -29,31 +65,6 @@ def afew(data_loader):
         sys.exit(2)
 
     #setup data and model
-    class AfewNet(nn.Module):
-        def __init__(self):
-            super(__class__,self).__init__()
-            dim=400
-            dim1=200; dim2=100; dim3=50
-            classes=7
-            self.re=spdnet.ReEig()
-            self.bimap1=spdnet.BiMap(1,1,dim,dim1)
-            # self.batchnorm1=spdnet.BatchNormSPD(dim1)
-            self.bimap2=spdnet.BiMap(1,1,dim1,dim2)
-            # self.batchnorm2=spdnet.BatchNormSPD(dim2)
-            self.bimap3=spdnet.BiMap(1,1,dim2,dim3)
-            # self.batchnorm3=spdnet.BatchNormSPD(dim3)
-            self.logeig=spdnet.LogEig()
-            self.linear=nn.Linear(dim3**2,classes).double()
-        def forward(self,x):
-            # x_spd=self.re(self.batchnorm1(self.bimap1(x)))
-            # x_spd=self.re(self.batchnorm2(self.bimap2(x_spd)))
-            # x_spd=self.batchnorm3(self.bimap3(x_spd))
-            x_spd=self.re(self.bimap1(x))
-            x_spd=self.re(self.bimap2(x_spd))
-            x_spd=self.bimap3(x_spd)
-            x_vec=self.logeig(x_spd).view(x_spd.shape[0],-1)
-            y=self.linear(x_vec)
-            return y
     model=AfewNet()
 
     #setup loss and optimizer

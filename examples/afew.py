@@ -45,7 +45,7 @@ class AfewNet(nn.Module):
         if self._bn:
             x=self.batchnorm1(x)
         x=self.logeig(x)
-        x_vec=.view(x.shape[0],-1)
+        x_vec=x.view(x.shape[0],-1)
         y=self.linear(x_vec)
         return y
 

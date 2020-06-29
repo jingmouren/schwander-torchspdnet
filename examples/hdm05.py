@@ -9,8 +9,29 @@ import torch as th
 import torch.nn as nn
 from torch.utils import data
 
-import torchspdnet.nn as nn_spd
+import torchspdnet.nn as spdnet
 from torchspdnet.optimizers import MixOptimizer
+
+class HDMNet(nn.Module):
+    def __init__(self, bn=False):
+        super(__class__,self).__init__()
+        dim=93
+        dim1=30
+        classes=117
+        self._bn = bn
+        self.bimap1=spdnet.BiMap(1,1,dim,dim1)
+        if bn:
+            self.batchnorm1=spdnet.BatchNormSPD(dim1)
+        self.logeig=spdnet.LogEig()
+        self.linear=nn.Linear(dim1**2,classes).double()
+    def forward(self,x):
+        x=self.bimap1(x)
+        if self._bn:
+            x=self.batchnorm1(x)
+        x=self.logeig(x)
+        x_vec=x.view(x_spd.shape[0],-1)
+        y=self.linear(x_vec)
+        return y
 
 def hdm05(data_loader):
 
@@ -27,22 +48,6 @@ def hdm05(data_loader):
         sys.exit(2)
 
     #setup data and model
-    class HDMNet(nn.Module):
-        def __init__(self):
-            super(__class__,self).__init__()
-            dim=93
-            dim1=30
-            classes=117
-            self.bimap1=nn_spd.BiMap(1,1,dim,dim1)
-            #self.batchnorm1=nn_spd.BatchNormSPD(dim1)
-            self.logeig=nn_spd.LogEig()
-            self.linear=nn.Linear(dim1**2,classes).double()
-        def forward(self,x):
-            #x_spd=self.batchnorm1(self.bimap1(x))
-            x_spd=self.bimap1(x)
-            x_vec=self.logeig(x_spd).view(x_spd.shape[0],-1)
-            y=self.linear(x_vec)
-            return y
     model=HDMNet()
 
     #setup loss and optimizer

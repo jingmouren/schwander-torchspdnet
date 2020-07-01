@@ -1,5 +1,4 @@
 import sys
-sys.path.insert(0,'..')
 from pathlib import Path
 import os
 import random
